@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { AchievementsGrid } from "@/components/profile/achievements-grid";
 import { GlassCard } from "@/components/ui/glass-card";
+import { getUserProfile, calculateProfileStats, getUserAchievementsWithStatus } from "@/lib/profile";
 import type { UserProfile, ProfileStats, Achievement } from "@/lib/types";
 
 interface PageProps {
@@ -22,16 +23,21 @@ export const metadata = {
 
 async function getPublicProfile(userId: string): Promise<PublicProfileData | null> {
     try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        const response = await fetch(`${baseUrl}/api/users/${userId}`, {
-            cache: "no-store",
-        });
-
-        if (!response.ok) {
+        const profile = await getUserProfile(userId);
+        if (!profile || !profile.is_profile_public) {
             return null;
         }
 
-        return response.json();
+        const [stats, achievements] = await Promise.all([
+            calculateProfileStats(userId),
+            getUserAchievementsWithStatus(userId),
+        ]);
+
+        return {
+            profile,
+            stats,
+            achievements: achievements.filter((achievement) => achievement.unlocked),
+        };
     } catch (error) {
         console.error("Error fetching public profile:", error);
         return null;
