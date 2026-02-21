@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabasePublicEnvOrNull } from "@/lib/supabase/config";
 
 type SupabaseCookie = {
     name: string;
@@ -12,21 +13,18 @@ export async function updateSession(request: NextRequest) {
         request,
     });
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const publishableKey =
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+    const env = getSupabasePublicEnvOrNull();
 
-    if (!supabaseUrl || !publishableKey) {
+    if (!env) {
         console.error(
-            "Supabase env vars missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY) in .env.local, then restart the dev server.",
+            "Supabase env vars missing. Set NEXT_PUBLIC_SUPABASE_URL and one of NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
         );
         return response;
     }
 
     const supabase = createServerClient(
-        supabaseUrl,
-        publishableKey,
+        env.url,
+        env.publishableKey,
         {
             cookies: {
                 getAll() {
