@@ -1,6 +1,12 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+type SupabaseCookie = {
+    name: string;
+    value: string;
+    options?: Record<string, unknown>;
+};
+
 export async function createClient() {
     const cookieStore = await cookies();
     const publishableKey =
@@ -12,14 +18,17 @@ export async function createClient() {
         publishableKey!,
         {
             cookies: {
-                get(name: string) {
-                    return cookieStore.get(name)?.value;
+                getAll() {
+                    return cookieStore.getAll();
                 },
-                set(name: string, value: string, options: Record<string, unknown>) {
-                    cookieStore.set({ name, value, ...options });
-                },
-                remove(name: string, options: Record<string, unknown>) {
-                    cookieStore.set({ name, value: "", ...options });
+                setAll(cookiesToSet: SupabaseCookie[]) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            cookieStore.set(name, value, options);
+                        });
+                    } catch {
+                        // Server Components may not allow cookie writes. Middleware refresh handles this safely.
+                    }
                 },
             },
         },

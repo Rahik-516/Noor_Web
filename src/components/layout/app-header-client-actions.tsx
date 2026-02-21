@@ -68,7 +68,15 @@ export function AppHeaderClientActions({ navItems }: AppHeaderClientActionsProps
         async function loadSession() {
             const {
                 data: { session },
+                error,
             } = await supabase.auth.getSession();
+
+            if (error && error.message.toLowerCase().includes("invalid refresh token")) {
+                await supabase.auth.signOut({ scope: "local" });
+                setIsAuthenticated(false);
+                return;
+            }
+
             setIsAuthenticated(Boolean(session));
         }
 

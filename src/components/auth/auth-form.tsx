@@ -25,6 +25,15 @@ export function AuthForm({ mode }: AuthFormProps) {
         setLoading(true);
 
         const supabase = createClient();
+
+        const {
+            error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError && sessionError.message.toLowerCase().includes("invalid refresh token")) {
+            await supabase.auth.signOut({ scope: "local" });
+        }
+
         const authAction =
             mode === "login"
                 ? supabase.auth.signInWithPassword({ email, password })

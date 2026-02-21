@@ -247,7 +247,9 @@ export function DailyGoals() {
     }, []);
 
     useEffect(() => {
-        if (!prayerTimes || Notification.permission !== "granted") return;
+        if (!prayerTimes) return;
+        if (!("Notification" in window)) return;
+        if (Notification.permission !== "granted") return;
 
         const notifyState = safeParseJson<Record<string, string>>(localStorage.getItem(GOAL_NOTIFY_KEY), {});
 

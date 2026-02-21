@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+type SupabaseCookie = {
+    name: string;
+    value: string;
+    options?: Record<string, unknown>;
+};
+
 export async function updateSession(request: NextRequest) {
     let response = NextResponse.next({
         request,
@@ -23,18 +29,18 @@ export async function updateSession(request: NextRequest) {
         publishableKey,
         {
             cookies: {
-                get(name: string) {
-                    return request.cookies.get(name)?.value;
+                getAll() {
+                    return request.cookies.getAll();
                 },
-                set(name: string, value: string, options: Record<string, unknown>) {
-                    request.cookies.set({ name, value, ...options });
+                setAll(cookiesToSet: SupabaseCookie[]) {
+                    cookiesToSet.forEach(({ name, value }) => {
+                        request.cookies.set(name, value);
+                    });
+
                     response = NextResponse.next({ request });
-                    response.cookies.set({ name, value, ...options });
-                },
-                remove(name: string, options: Record<string, unknown>) {
-                    request.cookies.set({ name, value: "", ...options });
-                    response = NextResponse.next({ request });
-                    response.cookies.set({ name, value: "", ...options });
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        response.cookies.set(name, value, options);
+                    });
                 },
             },
         },
@@ -59,7 +65,11 @@ export async function updateSession(request: NextRequest) {
     if (isProtectedRoute && !user) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/login";
-        return NextResponse.redirect(redirectUrl);
+        const redirectResponse = NextResponse.redirect(redirectUrl);
+        response.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie);
+        });
+        return redirectResponse;
     }
 
     return response;
